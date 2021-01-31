@@ -170,7 +170,6 @@ async def register_post():
     username = form.get('username')
     email = form.get('email')
     pw_txt = form.get('password')
-
     # Usernames must:
     # - be within 2-15 characters in length
     # - not contain both ' ' and '_', one is fine
