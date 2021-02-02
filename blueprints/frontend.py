@@ -259,6 +259,11 @@ async def logout():
 async def rules():
     return await render_template('rules.html')
 
+""" switcher """
+@frontend.route('/switcher') # GET
+async def switcher():
+    return await render_template('switcher.html')
+
 """ discord redirect """
 @frontend.route('/discord') # GET
 async def discord():

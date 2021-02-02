@@ -1,0 +1,46 @@
+{% extends 'base.html' %}
+{% block title %} Rules {% endblock %}
+
+{% block content %}
+<link rel="stylesheet" href="/static/css/pages/docs.css">
+<div class="main-block">
+	<!-- TODO: automate this via docs/rules.md (add a MD parser for stuff like this) -->
+	<div class="title-block">
+		<span>Server Switcher</span>
+		<h2 class="doc-title">
+			
+			<a href="https://cdn.discordapp.com/attachments/746041743622799591/805812089658540092/SutekinaSwitcher.exe">Download the Server Switcher</a>, hit Install Certificate, then Connect to Sutekina. You're done!
+		</h2>
+	</div>
+	<div class="doc-block">
+		<h3 class="doc-subtitle">Certificate (only use this if switcher doesn't work for you)</h3>
+		<ol>
+			<li><a href="https://cdn.discordapp.com/attachments/746041743622799591/805963048690778172/cert.der">Download the certificate here.</a></li>
+			<li>Open <b>cert.der</b> and click <b>Install Certificate</b></li>
+			<li>Select <b>Current User</b> then <b>Place all certificates in the following store</b>.</li>
+			<li>Click <b>Browse</b> and select <b>Trusted Root Certification Authorities</b>.</li>
+			<li>Click yes if prompted, the certificate installation should be succesful.</li>
+		</ol>
+
+		<h3 class="doc-subtitle">Manual Hosts Replacement (only use this if switcher doesn't work for you)</h3>
+		<ol>
+			<li>Navigate to <b>C:\Windows\System32\drivers\etc</b>.</li>
+			<li>Open the <b>hosts</b> file in your favorite text editor <b>supporting administrator privileges</b>.</li>
+			<li>If you see any lines containing <b>.ppy.sh</b>, remove them.</li>
+			<li>Add these lines to your <b>hosts</b> file:</li>
+			<br><b>
+212.227.215.205 osu.ppy.sh<br>
+212.227.215.205 c.ppy.sh<br>
+212.227.215.205 c1.ppy.sh<br>
+212.227.215.205 c2.ppy.sh<br>
+212.227.215.205 c3.ppy.sh<br>
+212.227.215.205 c4.ppy.sh<br>
+212.227.215.205 c5.ppy.sh<br>
+212.227.215.205 c6.ppy.sh<br>
+212.227.215.205 ce.ppy.sh<br>
+212.227.215.205 a.ppy.sh<br>
+212.227.215.205 i.ppy.sh<br></b>
+		</ol>
+	</div>
+</div>
+{% endblock %}
