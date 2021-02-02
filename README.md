@@ -1,7 +1,7 @@
 [![Discord](https://discordapp.com/api/guilds/748687781605408908/widget.png?style=shield)](https://discord.gg/ShEQgUx)
 
 # The frontend service for the modern osu! private server, [gulag](https://github.com/cmyui/gulag)!
-boobs
+
 ### Features
 - Fully implemented session authentication system allowing users to have a more interpersonal experience.
 - A leaderboard supporting all mods and modes available within the gulag stack.
