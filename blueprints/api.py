@@ -1,8 +1,7 @@
 # -*- coding: utf-8 -*-
 
-import orjson
-from quart import Blueprint, request
 from cmyui import log, Ansi
+from quart import Blueprint, request, jsonify
 
 from objects import glob
 from objects.utils import convert_mode_int, get_safe_name
@@ -15,7 +14,7 @@ api = Blueprint('api', __name__)
 valid_modes = frozenset({'std', 'taiko', 'catch', 'mania'})
 valid_mods = frozenset({'vn', 'rx', 'ap'})
 valid_sorts = frozenset({'tscore', 'rscore', 'pp', 'plays',
-                        'playtime', 'acc', 'maxcombo'})
+                        'playtime', 'acc', 'max_combo'})
 
 """ /get_leaderboard """
 @api.route('/get_leaderboard') # GET
@@ -42,9 +41,9 @@ async def get_leaderboard():
         'u.country, tscore_{0}_{1} tscore, '
         'rscore_{0}_{1} rscore, pp_{0}_{1} pp, '
         'plays_{0}_{1} plays, playtime_{0}_{1} playtime, '
-        'acc_{0}_{1} acc, maxcombo_{0}_{1} maxcombo FROM stats '
+        'acc_{0}_{1} acc, max_combo_{0}_{1} max_combo FROM stats '
         'JOIN users u ON stats.id = u.id '
-        'WHERE pp_{0}_{1} > 0'.format(mods, mode)]
+        'WHERE pp_{0}_{1} > 0 AND u.priv >= 3'.format(mods, mode)]
 
     args = []
 
@@ -61,11 +60,11 @@ async def get_leaderboard():
     if glob.config.debug:
         log(' '.join(q), Ansi.LGREEN)
     res = await glob.db.fetchall(' '.join(q), args)
-    return orjson.dumps(res) if res else b'{}'
+    return jsonify(res) if res else b'{}'
 
-""" /get_user """
-@api.route('/get_user') # GET
-async def get_user():
+""" /get_user_info """
+@api.route('/get_user_info') # GET
+async def get_user_info():
     # get request args
     id = request.args.get('id', type=int)
     name = request.args.get('name', type=str)
@@ -110,12 +109,18 @@ async def get_user():
         'acc_ap_std, '
         
         # maximum combo
-        'maxcombo_vn_std, maxcombo_vn_taiko, maxcombo_vn_catch, maxcombo_vn_mania, '
-        'maxcombo_rx_std, maxcombo_rx_taiko, maxcombo_rx_catch, '
-        'maxcombo_ap_std '
+        'max_combo_vn_std, max_combo_vn_taiko, max_combo_vn_catch, max_combo_vn_mania, '
+        'max_combo_rx_std, max_combo_rx_taiko, max_combo_rx_catch, '
+        'max_combo_ap_std '
         
         # join users
         'FROM stats JOIN users u ON stats.id = u.id']
+        
+    # achivement
+    q2 = ['''
+    SELECT userid, achid FROM user_achievements ua
+        INNER JOIN users u ON u.id = ua.userid
+    ''']
     
     # argumnts
     args = []
@@ -123,19 +128,24 @@ async def get_user():
     # append request arguments (id or name)
     if id:
         q.append('WHERE u.id = %s')
+        q2.append('WHERE u.id = %s')
         args.append(id)
     elif name:
         q.append('WHERE u.safe_name = %s')
+        q2.append('WHERE u.safe_name = %s')
         args.append(get_safe_name(name))
+
+    q2.append('ORDER BY ua.achid ASC')
 
     if glob.config.debug:
         log(' '.join(q), Ansi.LGREEN)
     res = await glob.db.fetchall(' '.join(q), args)
-    return orjson.dumps(res) if res else b'{}'
+    res_ach = await glob.db.fetchall(' '.join(q2), args)
+    return jsonify(userdata=res,achivement=res_ach) if res else b'{}'
 
-""" /get_scores """
-@api.route('/get_scores') # GET
-async def get_scores():
+""" /get_user_scores """
+@api.route('/get_user_scores') # GET
+async def get_user_scores():
     # get request args
     id = request.args.get('id', type=int)
     mode = request.args.get('mode', type=str)
@@ -169,10 +179,12 @@ async def get_scores():
         return b'wrong mode type! (std, taiko, catch, mania)'
 
     if not limit:
-        limit = 5
+        limit = 50
 
     # fetch scores
     q = [f'SELECT scores_{mods}.*, maps.* '
+        f'FROM scores_{mods} JOIN maps ON scores_{mods}.map_md5 = maps.md5']
+    q2 = [f'SELECT COUNT(scores_{mods}.id) AS result '
         f'FROM scores_{mods} JOIN maps ON scores_{mods}.map_md5 = maps.md5']
     
     # argumnts
@@ -181,20 +193,25 @@ async def get_scores():
     q.append(f'WHERE scores_{mods}.userid = %s ' 
             f'AND scores_{mods}.mode = {mode} '
             f'AND maps.status = 2')
+    q2.append(f'WHERE scores_{mods}.userid = %s ' 
+            f'AND scores_{mods}.mode = {mode}')
     if sort == 'pp':
         q.append(f'AND scores_{mods}.status = 2')
+        q2.append(f'AND scores_{mods}.status = 2')
     q.append(f'ORDER BY scores_{mods}.{sort} DESC '
             f'LIMIT {limit}')
     args.append(id)
 
     if glob.config.debug:
         log(' '.join(q), Ansi.LGREEN)
+        log(' '.join(q2), Ansi.LGREEN)
     res = await glob.db.fetchall(' '.join(q), args)
-    return orjson.dumps(res) if res else b'{}'
+    limit = await glob.db.fetch(' '.join(q2), args)
+    return jsonify(scores=res, limit=limit['result']) if res else jsonify(scores=[], limit=limit['result'])
 
-""" /get_most_beatmaps """
-@api.route('/get_most_beatmaps') # GET
-async def get_most_beatmaps():
+""" /get_user_most """
+@api.route('/get_user_most') # GET
+async def get_user_most():
     # get request args
     id = request.args.get('id', type=int)
     mode = request.args.get('mode', type=str)
@@ -220,7 +237,7 @@ async def get_most_beatmaps():
         return b'wrong mode type! (std, taiko, catch, mania)'
 
     if not limit:
-        limit = 5
+        limit = 50
 
     # fetch scores
     q = [f'SELECT scores_{mods}.mode, scores_{mods}.map_md5, maps.artist, maps.title, maps.set_id, maps.creator, COUNT(*) AS `count` '
@@ -237,52 +254,50 @@ async def get_most_beatmaps():
     if glob.config.debug:
         log(' '.join(q), Ansi.LGREEN)
     res = await glob.db.fetchall(' '.join(q), args)
-    return orjson.dumps(res) if res else b'{}'
+    return jsonify(maps=res) if res else jsonify(maps=[])
 
-@api.route('/get_grade') # GET
-async def get_grade():
-    # get request args
+@api.route('/get_user_grade') # GET
+async def get_user_grade():
+    # get request stuff
+    mode = request.args.get('mode', default='std', type=str)
+    mods = request.args.get('mods', default='rx', type=str)
     id = request.args.get('id', type=int)
-    mode = request.args.get('mode', type=str)
-    mods = request.args.get('mods', type=str)
 
-    # check if required parameters are met
-    if not id:
-        return b'missing parameters! (id)'
-    
+    # validate everything
+    if mode not in valid_modes:
+        return b'invalid mode! (std, taiko, catch, mania)'
+    else:
+        mode = convert_mode_int(mode)
+
     if mods not in valid_mods:
         return b'invalid mods! (vn, rx, ap)'
-    
-    if mode in valid_modes:
-        mode = convert_mode_int(mode)
-    else:
-        return b'wrong mode type! (std, taiko, catch, mania)'
-    
-    grades = ['xh','ss','sh','s','a']
 
-    # fetch grades
-    q = [f'SELECT userid,']
-    
-    for grade in grades:
-        if grade == 'a':
-            q.append(f'(SELECT COUNT(id) FROM scores_{mods} WHERE grade="{grade}" and mode = {mode}) as {grade}')
-            break
-        q.append(f'(SELECT COUNT(id) FROM scores_{mods} WHERE grade="{grade}" and mode = {mode}) as {grade},')
-    
-    # argumnts
-    args = []
-    
-    q.append(f'FROM scores_{mods}')
-    q.append(f'WHERE userid = %s AND mode = {mode}')
-    args.append(id)
+    if not id:
+        return b'missing id!'
 
+    # get all scores
+    q = f'SELECT grade FROM scores_{mods} WHERE mode = {mode} AND userid = %s'
+
+    scores = await glob.db.fetchall(q, [id])
+
+    grades = {
+        "x": 0,
+        "xh": 0,
+        "s": 0,
+        "sh": 0,
+        "a": 0
+    }
+      
+    if not scores:
+        return jsonify(grades)
+
+
+
+    # count
+    for score in (x for x in scores if x['grade'].lower() in grades):
+        grades[score['grade'].lower()] += 1 
+        
     if glob.config.debug:
         log(' '.join(q), Ansi.LGREEN)
-    res = await glob.db.fetch(' '.join(q), args)
-    print(res)
-    return orjson.dumps(res) if res else b'{}'
-
-# For Development in localhost
-@api.route('/get_online')
-async def api_get_online():
-    return '{"online": 2}'.encode()
+    # return
+    return jsonify(grades)

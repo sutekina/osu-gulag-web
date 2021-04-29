@@ -4,7 +4,10 @@
 
 .sidebar {
     background: hsl(var(--main), 10%, 15%);
+<<<<<<< HEAD
     height: calc(100vh - 115px);
+=======
+>>>>>>> 17e9d1aed40204edae9e4d28e6d92e2d0a8e49ac
     width: 230px;
     top: 0;
     left: 0;
@@ -12,7 +15,11 @@
     background-size: cover;
     background-position: 50%;
     display: block;
+<<<<<<< HEAD
     transition: .5s cubic-bezier(.685, .0473, .346, 1)
+=======
+    transition: .5s cubic-bezier(.685, .0473, .346, 1);
+>>>>>>> 17e9d1aed40204edae9e4d28e6d92e2d0a8e49ac
 }
 
 .sidebar .sidebar-wrapper {
@@ -21,7 +28,11 @@
     max-height: calc(100vh - 705px);
     z-index: 4;
     position: relative;
+<<<<<<< HEAD
     overflow: auto
+=======
+    overflow: auto;
+>>>>>>> 17e9d1aed40204edae9e4d28e6d92e2d0a8e49ac
 }
 
 .sidebar .sidebar-wrapper>.nav [data-toggle=collapse]~div>ul>li>a .sidebar-normal {

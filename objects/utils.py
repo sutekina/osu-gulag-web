@@ -1,16 +1,20 @@
 # -*- coding: utf-8 -*-
 
+from cmyui import log, Ansi
 from quart import render_template
 
+from objects import glob
+
 async def flash(status, msg, template):
-    """ Flashes a success/error snackbar message on a specified template. """
+    """ Flashes a success/error message on a specified template. """
     return await render_template(f'{template}.html', flash=msg, status=status)
 
 def get_safe_name(name: str) -> str:
     """ Returns the safe version of a username. """
     return name.lower().replace(' ', '_')
 
-def convert_mode_int(mode: str) -> str:
+def convert_mode_int(mode: str) -> int:
+    """ Converts mode (str) to mode (int). """
     if mode == 'std':
         return 0
     elif mode == 'taiko':
@@ -21,8 +25,9 @@ def convert_mode_int(mode: str) -> str:
         return 3
     else:
         return b'wrong mode type! (std, taiko, catch, mania)'
-
-def convert_mode_str(mode: int) -> int:
+    
+def convert_mode_str(mode: int) -> str:
+    """ Converts mode (int) to mode (str). """
     if mode == 0:
         return 'std'
     elif mode == 0:
@@ -33,3 +38,37 @@ def convert_mode_str(mode: int) -> int:
         return 'mania'
     else:
         return b'wrong mode type! (0, 1, 2, 3)'
+
+async def fetch_geoloc(ip: str) -> str:
+    """ Fetches the country code corresponding to an IP. """
+    url = f'http://ip-api.com/line/{ip}'
+    
+    async with glob.http.get(url) as resp:
+        if not resp or resp.status != 200:
+            if glob.config.debug:
+                log('Failed to get geoloc data: request failed.', Ansi.LRED)
+            return 'xx'
+        status, *lines = (await resp.text()).split('\n')
+        if status != 'success':
+            if glob.config.debug:
+                log(f'Failed to get geoloc data: {lines[0]}.', Ansi.LRED)
+            return 'xx'
+        return lines[1].lower()
+
+async def validate_captcha(data: str) -> bool:
+    url = f'https://hcaptcha.com/siteverify'
+    
+    data = {
+        'secret': glob.config.hCaptcha_secret,
+        'response': data
+    }
+
+    async with glob.http.post(url, data=data) as resp:
+        if not resp or resp.status != 200:
+            if glob.config.debug:
+                log('Failed to verify captcha: request failed.', Ansi.LRED)
+            return False
+
+        res = await resp.json()
+
+        return res['success']

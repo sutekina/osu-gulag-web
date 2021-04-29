@@ -11,8 +11,7 @@ new Vue({
             mode: mode,
             mods: mods,
             userid: userid,
-            limit: [5, 5, 5],
-            full: [false, false, false]
+            loaddata: [false, false, false]
         }
     },
     created() {
@@ -27,74 +26,65 @@ new Vue({
     methods: {
         LoadProfileData(userid) {
             var vm = this;
-            vm.$axios.get("https://" + window.location.hostname + ":" + window.location.port + "/api/get_user", {
+            vm.$axios.get(window.location.protocol + "//" + window.location.hostname + ":" + window.location.port + "/api/get_user_info", {
                 params: {
                     id: userid,
                 }
             })
                 .then(function (response) {
-                    vm.userdata = response.data;
+                    vm.userdata = response.data.userdata;
                 });
         },
         LoadMostBeatmaps(userid, mode, mods) {
             var vm = this;
-            vm.$axios.get("https://" + window.location.hostname + ":" + window.location.port + "/api/get_most_beatmaps", {
+            vm.loaddata[2] = true
+            vm.$axios.get(window.location.protocol + "//" + window.location.hostname + ":" + window.location.port + "/api/get_user_most", {
                 params: {
                     id: userid,
                     mode: mode,
                     mods: mods,
-                    limit: vm.limit[2]
+                    limit: 5
                 }
             })
                 .then(function (response) {
-                    vm.mostdata = response.data;
-                    if (vm.mostdata.length != vm.limit[2]) {
-                        vm.full[2] = true
-                    }
+                    vm.mostdata = response.data.maps;
+                    vm.loaddata[2] = false
                 });
         },
         LoadScores(userid, mode, mods, sort) {
             var vm = this;
             switch (sort) {
                 case 'best':
-                    console.log('best will coming')
-                    limitdata = 0
+                    type = 0
+                    vm.loaddata[0] = true
                     break;
                 case 'recent':
-                    console.log('recent will coming')
-                    limitdata = 1
+                    type = 1
+                    vm.loaddata[1] = true
                     break;
                 default:
             }
-            vm.$axios.get("https://" + window.location.hostname + ":" + window.location.port + "/api/get_scores", {
+            vm.$axios.get(window.location.protocol + "//" + window.location.hostname + ":" + window.location.port + "/api/get_user_scores", {
                 params: {
                     id: userid,
                     mode: mode,
                     mods: mods,
                     sort: sort,
-                    limit: vm.limit[limitdata]
+                    limit: 5
                 }
             })
                 .then(function (response) {
-                    vm[`${sort}data`] = response.data;
-                    if (vm[`${sort}data`].length != vm.limit[limitdata]) {
-                        if (sort == 'best') {
-                            vm.full[0] = true
-                        } else if (sort == 'recent') {
-                            vm.full[1] = true
-                        }
-                    } else {
-                        if (sort == 'best') {
-                            vm.full[0] = false
-                        } else if (sort == 'recent') {
-                            vm.full[1] = false
-                        }
+                    vm[`${sort}data`] = response.data.scores;
+                    if (sort == 'best') {
+                        vm.loaddata[0] = false
+                    } else if (sort == 'recent') {
+                        vm.loaddata[1] = false
                     }
                 });
         },
         LoadGrades(userid, mode, mods) {
             var vm = this;
-            vm.$axios.get("https://" + window.location.hostname + ":" + window.location.port + "/api/get_grade", {
+            vm.$axios.get(window.location.protocol + "//" + window.location.hostname + ":" + window.location.port + "/api/get_user_grade", {
                 params: {
                     id: userid,
                     mode: mode,
@@ -103,6 +93,22 @@ new Vue({
             })
                 .then(function (response) {
                     vm.gradedata = response.data;
+                });
+        },
+        LoadReplay(id, mods) {
+            var vm = this;
+            document.getElementById('contentmodal').innerHTML = ""
+            document.getElementById('modaldisplayer').className = "modal is-active"
+            vm.$axios.get(window.location.protocol + "//" + window.location.hostname + ":" + window.location.port + "/api/get_replay",
+                {
+                    params: {
+                        id: id,
+                        mods: mods,
+                    }
+                })
+                .then(function (response) {
+                    replaydata = response.data;
+                    document.getElementById('contentmodal').innerHTML = "<div class='score-beatmap'><h1 class='score-beatmap-title'><a class='score-beatmap-linkplain'>" + replaydata.artist + " - " + replaydata.title + " [" + replaydata.version + "]</a></h1></div><div class='score-info'><div class='infoitem infoitem-player'><div class='score-player'><div class='score-player-row--score'> <div class='score-player-score'>" + replaydata.score + "</div></div><div class='score-player-row--player'><span>Played by</span><strong>" + replaydata.name + "</strong><span>Submitted on</span><strong>" + replaydata.play_time + "</strong></div></div></div><div class='infoitem infoitem--dial'> <div class='score-dial'> <div class='score-dial-layer--grade'><span>" + replaydata.grade + "</span></div></div></div></div><div class='score-stats'> <div class='score-stats-group score-stats-group--stats'> <div class='score-stats-group-row'> <div class='score-stats-stat'> <div class='score-stats-stat-row--label'>Accuracy</div><div class='score-stats-stat-row'>" + replaydata.acc + "%</div></div><div class='score-stats-stat'> <div class='score-stats-stat-row--label'>Max Combo</div><div class='score-stats-stat-row'>" + replaydata.max_combo + "x</div></div><div class='score-stats-stat'> <div class='score-stats-stat-row--label'>pp</div><div class='score-stats-stat-row'><span>" + replaydata.pp + "</span></div></div></div><div class='score-stats-group-row'> <div class='score-stats-stat'> <div class='score-stats-stat-row--label'>300</div><div class='score-stats-stat-row'>" + replaydata.n300 + "</div></div><div class='score-stats-stat'> <div class='score-stats-stat-row--label'>100</div><div class='score-stats-stat-row'>" + replaydata.n100 + "</div></div><div class='score-stats-stat'> <div class='score-stats-stat-row--label'>50</div><div class='score-stats-stat-row'>" + replaydata.n50 + "</div></div><div class='score-stats-stat'> <div class='score-stats-stat-row--label'>miss</div><div class='score-stats-stat-row'>" + replaydata.nmiss + "</div></div></div></div></div>"
                 });
         },
         ChangeModeMods(mode, mods) {
@@ -117,24 +123,6 @@ new Vue({
             vm.LoadScores(vm.userid, vm.mode, vm.mods, 'recent')
             vm.LoadGrades(vm.userid, vm.mode, vm.mods)
         },
-        AddLimit(which) {
-            var vm = this;
-            if (window.event) {
-                window.event.preventDefault();
-            }
-            if (which == 'bestscore') {
-                vm.limit[0] = vm.limit[0] + 5
-                vm.LoadScores(vm.userid, vm.mode, vm.mods, 'best')
-            }
-            else if (which == 'recentscore') {
-                vm.limit[1] = vm.limit[1] + 5
-                vm.LoadScores(vm.userid, vm.mode, vm.mods, 'recent')
-            }
-            else if (which == 'mostplay') {
-                vm.limit[2] = vm.limit[2] + 5
-                vm.LoadMostBeatmaps(vm.userid, vm.mode, vm.mods)
-            }
-        },
         addCommas(nStr) {
             nStr += '';
             var x = nStr.split('.');
@@ -145,6 +133,17 @@ new Vue({
                 x1 = x1.replace(rgx, '$1' + ',' + '$2');
             }
             return x1 + x2;
+        },
+        secondsToDhm(seconds) {
+            seconds = Number(seconds);
+            var d = Math.floor(seconds / (3600*24));
+            var h = Math.floor(seconds % (3600*24) / 3600);
+            var m = Math.floor(seconds % 3600 / 60);
+            
+            var dDisplay = d + "d ";
+            var hDisplay = h + "h ";
+            var mDisplay = m + "m ";
+            return dDisplay + hDisplay + mDisplay;
         },
     },
     computed: {
